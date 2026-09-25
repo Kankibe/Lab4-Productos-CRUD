@@ -10,7 +10,7 @@ namespace ProyectoProductos
 {
     public class Conexion
     {
-        private static string cadenaConexion = "Server=localhost; Database=productosdb;Uid=root;Pwd=Octubre28_";
+        private static string cadenaConexion = "Server=localhost; Database=productosdb;Uid=root;Pwd= -----";
 
         public static MySqlConnection ObtenerConexion()
         {
