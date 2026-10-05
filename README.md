@@ -52,6 +52,7 @@ Para el desarrollo del laboratorio se utilizó MySQL Workbench como herramienta 
 
 
 **Imagenes** 
+interfaz principal
 
 <img width="750" height="673" alt="image" src="https://github.com/user-attachments/assets/3ba3618a-3e6e-48b1-bf19-d73dfacde175" />
 
