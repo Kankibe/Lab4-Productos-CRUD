@@ -50,6 +50,11 @@ Si alguna validación falla, se muestra un mensaje al usuario y se detiene el pr
 
 Para el desarrollo del laboratorio se utilizó MySQL Workbench como herramienta de gestión de base de datos, donde se almacena la información de los productos registrados desde la aplicación.
 
+
+**Imagenes** 
+
+
+
 ## Información del Estudiante
 
 Este laboratorio ha sido desarrollado por la estudiante de la Universidad Tecnológica de Panamá:
