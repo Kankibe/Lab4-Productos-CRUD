@@ -2,9 +2,6 @@
 
 # Facultad de Ingeniería de Sistemas Computacionales
 
-## Fecha de Ejecución:
-
-24 de septiembre de 2026
 
 ## Objetivos
 
@@ -26,6 +23,21 @@ La aplicación permite registrar productos con su nombre, precio, cantidad e ima
 - MySQL Workbench
 - Visual Studio 2026
 
+### Tabla de Estructura de Datos
+
+| Campo | Tipo | Nulo | Clave | Descripción |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `INT` | NO | PRI (`AUTO_INCREMENT`) | Identificador único del producto |
+| `nombre` | `VARCHAR(100)` | NO | | Nombre o descripción del producto |
+| `precio` | `DECIMAL(10,2)` | NO | | Precio unitario |
+| `cantidad` | `INT` | NO | | Unidades en inventario |
+| `imagen` | `LONGBLOB` | SÍ | | Archivo de imagen almacenado en formato binario |
+
+---
+
+<img width="431" height="302" alt="image" src="https://github.com/user-attachments/assets/9e06ccbf-dc8f-4157-9c4b-b859da6a4b1f" />
+
+
 ## Arquitectura del Proyecto
 
 El proyecto separa responsabilidades en distintos archivos:
@@ -46,19 +58,28 @@ Antes de guardar o modificar un producto, la aplicación valida que:
 
 Si alguna validación falla, se muestra un mensaje al usuario y se detiene el proceso de guardado.
 
-## Base de Datos
-
-Para el desarrollo del laboratorio se utilizó MySQL Workbench como herramienta de gestión de base de datos, donde se almacena la información de los productos registrados desde la aplicación.
-
-
 **Imagenes** 
 
 interfaz principal
 
 <img width="750" height="673" alt="image" src="https://github.com/user-attachments/assets/3ba3618a-3e6e-48b1-bf19-d73dfacde175" />
 
+## Guía de Instalación y Ejecución
 
+1. **Clonar el repositorio:**
+   ```bash
+   git clone <URL_DEL_REPOSITORIO>
+   ```
+2. **Configurar la Base de Datos:**
+   - Abrir **MySQL Workbench**.
+   - Ejecutar el archivo sql.
+3. **Configurar la Aplicación:**
+   - Abrir el proyecto en **Visual Studio **.
+   - Revisar la cadena de conexión en la clase `Conexion.cs` (usuario, contraseña, servidor y puerto).
+4. **Ejecutar:**
+   - Presionar `F5` o el botón **Iniciar** en Visual Studio.
 
+---
 
 ## Información del Estudiante
 
