@@ -10,8 +10,10 @@ namespace Lab_4_creo
 {
     public partial class Form1 : Form
     {
-        // Declaración de variables globales del formulario (Página 23 y 26)
+        // Declaración de variables globales del formulario
+        private List<(TextBox txt, IValidadorCampo validador)> camposAValidar;
         private int idProducto = 0;
+        private bool cargando = false;
         private List<Producto> listaProductos;
         private Dictionary<string, object> myProducto = new Dictionary<string, object>();
 
@@ -19,7 +21,29 @@ namespace Lab_4_creo
         public Form1()
         {
             InitializeComponent();
+            camposAValidar = new List<(TextBox txt, IValidadorCampo validador)>
+            {
+                (txtNombre, new ValidadorTexto()),
+                (txtPrecio, new ValidadorDecimal()),
+                (txtCantidad, new ValidadorEntero())
+            };
+
+            this.Load += Form1_Load;
             listaProductos = new List<Producto>();
+
+            dgvProductos.ReadOnly = true;
+            dgvProductos.AllowUserToAddRows = false;
+            dgvProductos.AllowUserToDeleteRows = false;
+            dgvProductos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvProductos.MultiSelect = false;
+
+            foreach (DataGridViewColumn col in dgvProductos.Columns)
+            {
+                col.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
+
+            txtId.ReadOnly = true;
+            btnModificar.Enabled = false;
         }
 
         // Evento que carga los datos al abrir la ventana
@@ -30,32 +54,48 @@ namespace Lab_4_creo
 
         private void cargarProductos(string filtro = "")
         {
-            dgvProductos.Rows.Clear();
-            dgvProductos.Refresh();
-
-            listaProductos = Conexion.GetProductos(filtro);
-
-            foreach (var prod in listaProductos)
+            cargando = true;
+            try
             {
-                Image img = null;
+                dgvProductos.Rows.Clear();
+                listaProductos = Conexion.GetProductos(filtro);
 
-                if (prod.Imagen != null && prod.Imagen.Length > 0)
+                foreach (var prod in listaProductos)
                 {
-                    using (MemoryStream ms = new MemoryStream(prod.Imagen))
-                    {
-                        using (Bitmap bmp = new Bitmap(ms))
-                        {
-                            img = new Bitmap(bmp); // Clona la imagen para liberar el MemoryStream
-                        }
-                    }
+                    System.Drawing.Image img = ImagenHelper.ByteArrayToImage(prod.Imagen, 80, 60);
+                    dgvProductos.Rows.Add(prod.Id, prod.Nombre, prod.Precio, prod.Cantidad, img);
                 }
 
-                // Agrega los valores a las filas del DataGridView
-                dgvProductos.Rows.Add(prod.Id, prod.Nombre, prod.Precio, prod.Cantidad, img);
+                dgvProductos.ClearSelection();
+            }
+            finally
+            {
+                cargando = false;
             }
         } // fin de cargarProductos
 
+        private void dgvProductos_SelectionChanged(object sender, EventArgs e)
+        {
+            if (cargando) return;
+            if (dgvProductos.SelectedRows.Count == 0) return;
 
+            DataGridViewRow fila = dgvProductos.SelectedRows[0];
+            if (fila.Cells["Id"].Value == null) return;
+
+            idProducto = Convert.ToInt32(fila.Cells["Id"].Value);
+            txtId.Text = idProducto.ToString();
+            txtNombre.Text = Convert.ToString(fila.Cells["Producto"].Value);
+            txtPrecio.Text = Convert.ToDecimal(fila.Cells["Precio"].Value).ToString();
+            txtCantidad.Text = Convert.ToInt32(fila.Cells["Cantidad"].Value).ToString();
+
+            // Se toma la imagen original de la lista (no la miniatura del grid)
+            Producto prod = listaProductos.Find(p => p.Id == idProducto);
+            PictureBox.Image = prod != null ? ImagenHelper.ByteArrayToImage(prod.Imagen) : null;
+            PictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
+
+            btnGuardar.Enabled = false;
+            btnModificar.Enabled = true;
+        } // fin dgvProductos_SelectionChanged
 
         private void label1_Click(object sender, EventArgs e)
         {
@@ -64,6 +104,12 @@ namespace Lab_4_creo
 
         private void btnModificar_Click(object sender, EventArgs e)
         {
+            if (idProducto == 0)
+            {
+                MessageBox.Show("Selecciona un producto del grid antes de modificar");
+                return;
+            }
+
             if (!datosCorrectos())
             {
                 return;
@@ -77,6 +123,7 @@ namespace Lab_4_creo
             cargarProductos(txtBusqueda.Text.Trim());
         }
 
+        // Clic en la foto del producto: abre el selector de imagen
         private void PictureBox_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -86,8 +133,8 @@ namespace Lab_4_creo
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    pictureBox1.Image = Image.FromFile(openFileDialog.FileName);
-                    pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+                    PictureBox.Image = Image.FromFile(openFileDialog.FileName);
+                    PictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
                 }
             }
         }
@@ -104,7 +151,6 @@ namespace Lab_4_creo
             if (Conexion.InsertSeguro("productos", myProducto))
             {
                 MessageBox.Show("Se ha guardado satisfactoriamente el registro");
-                // Refresca el DataGridView volviendo a consultar la base de datos
                 cargarProductos();
                 limpiarCampos();
             }
@@ -128,10 +174,10 @@ namespace Lab_4_creo
             myProducto["precio"] = decimal.Parse(txtPrecio.Text.Trim());
             myProducto["nombre"] = txtNombre.Text.Trim();
 
-            if (pictureBox1.Image != null)
+            if (PictureBox.Image != null)
             {
-                // Convierte una imagen en un array de bytes 1 y ceros
-                myProducto["imagen"] = ImageToByteArray(pictureBox1.Image);
+                // Convierte una imagen en un array de bytes
+                myProducto["imagen"] = ImagenHelper.ImageToByteArray(PictureBox.Image);
             }
             else
             {
@@ -141,32 +187,22 @@ namespace Lab_4_creo
 
         private bool datosCorrectos()
         {
-            if (txtNombre.Text.Trim().Equals(""))
+            bool todoOk = true;
+
+            foreach (var item in camposAValidar)
             {
-                MessageBox.Show("Ingrese el Nombre del Producto");
-                return false;
+                if (!item.validador.EsValido(item.txt.Text.Trim()))
+                {
+                    errorProvider1.SetError(item.txt, item.validador.MensajeError);
+                    todoOk = false;
+                }
+                else
+                {
+                    errorProvider1.SetError(item.txt, string.Empty);
+                }
             }
-            if (txtPrecio.Text.Trim().Equals(""))
-            {
-                MessageBox.Show("Ingrese el Precio");
-                return false;
-            }
-            if (txtCantidad.Text.Trim().Equals(""))
-            {
-                MessageBox.Show("Ingrese la Cantidad");
-                return false;
-            }
-            if (!decimal.TryParse(txtPrecio.Text.Trim(), out decimal precio))
-            {
-                MessageBox.Show("Ingrese un Precio correcto");
-                return false;
-            }
-            if (!int.TryParse(txtCantidad.Text.Trim(), out int cantidad))
-            {
-                MessageBox.Show("Ingrese una cantidad correcta");
-                return false;
-            }
-            return true;
+
+            return todoOk;
         }
 
         private void limpiarCampos()
@@ -175,47 +211,34 @@ namespace Lab_4_creo
             txtNombre.Clear();
             txtPrecio.Clear();
             txtCantidad.Clear();
-            pictureBox1.Image = null;
+            PictureBox.Image = null;
             idProducto = 0;
             btnGuardar.Enabled = true;
+            btnModificar.Enabled = false;
+            dgvProductos.ClearSelection();
+            errorProvider1.Clear();
         }
-
-        private void dgvProductos_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return; // evita error si se hace click en el encabezado
-
-            DataGridViewRow fila = dgvProductos.Rows[e.RowIndex];
-
-            idProducto = Convert.ToInt32(fila.Cells["Id"].Value);
-            txtId.Text = idProducto.ToString();
-            txtNombre.Text = Convert.ToString(fila.Cells["Producto"].Value);
-            txtPrecio.Text = Convert.ToDecimal(fila.Cells["Precio"].Value).ToString();
-            txtCantidad.Text = Convert.ToInt32(fila.Cells["Cantidad"].Value).ToString();
-
-            btnGuardar.Enabled = false;
-            btnModificar.Enabled = true;
-        } // fin dgvProductos_CellClick
 
         private void btnLimpiar_Click(object sender, EventArgs e)
         {
             limpiarCampos();
-            btnModificar.Enabled = false;
         } // fin btnLimpiar_Click
 
         private void ModificarDatosBD()
         {
             CargarDatosProductos();
-            //Asegurar que mi arreglo tiene los datos
-            //MessageBox.Show("el Nombre del Producto es: " + myProducto["Nombre"]);
-            // Actualiza el producto donde el id_producto sea igual a 5
-
-            MessageBox.Show("el id del producto es: " + idProducto);
 
             bool resultado = Conexion.UpdateSeguro("productos", myProducto, "id", idProducto);
 
             if (resultado)
             {
-                Console.WriteLine("Actualización exitosa.");
+                MessageBox.Show("Producto actualizado correctamente");
+                cargarProductos();
+                limpiarCampos();
+            }
+            else
+            {
+                MessageBox.Show("No se pudo actualizar el producto");
             }
         } // fin ModificarDatosBD
 
@@ -247,5 +270,15 @@ namespace Lab_4_creo
             }
         } // fin btnBorrar_Click
 
+        // Clic en la lupa del panel de búsqueda: recarga el grid
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+            cargarProductos(txtBusqueda.Text.Trim());
+        }
+
+        private void dgvProductos_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
     }
 }
